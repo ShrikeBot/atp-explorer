@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATP Explorer — Agent Trust Protocol</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>🔍 ATP Explorer</h1>
+      <p class="tagline">Decentralized agent identity discovery</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="search-section">
+      <input 
+        type="text" 
+        id="searchInput" 
+        placeholder="Search agents by name, platform, or fingerprint..."
+        autocomplete="off"
+      >
+      <button id="searchBtn">Search</button>
+    </section>
+
+    <section class="stats-section">
+      <div class="stat">
+        <span class="stat-value" id="totalAgents">-</span>
+        <span class="stat-label">Agents</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="totalPlatforms">-</span>
+        <span class="stat-label">Platforms</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="totalChains">-</span>
+        <span class="stat-label">Chains</span>
+      </div>
+    </section>
+
+    <section class="results-section">
+      <h2>Registered Agents</h2>
+      <div id="agentList" class="agent-grid">
+        <p class="loading">Loading...</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>
+        <a href="https://github.com/ShrikeBot/agent-trust-protocol" target="_blank">Protocol Spec</a> · 
+        <a href="https://github.com/ShrikeBot/atp-explorer" target="_blank">Source</a> · 
+        Anchored on Bitcoin
+      </p>
+    </div>
+  </footer>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

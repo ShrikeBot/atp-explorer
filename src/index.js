@@ -21,6 +21,9 @@ const REGISTRY_PATH = process.env.ATP_REGISTRY_PATH ||
 app.use(cors());
 app.use(express.json());
 
+// Serve static frontend
+app.use(express.static(join(__dirname, '../public')));
+
 // --- Data Loading ---
 
 function normalizeIdentity(raw) {
