@@ -1,5 +1,5 @@
 // ATP Explorer Frontend
-const API_BASE = '/v1';
+const API_BASE = 'https://api.atprotocol.io/v1';
 
 // --- API Calls ---
 
@@ -38,7 +38,9 @@ function getPlatformIcon(platform) {
 }
 
 function renderAgentCard(agent) {
-  const hasProof = agent.proofOfExistence?.txid;
+  // Handle both nested (agent.gpg.fingerprint) and flat (agent.gpgFingerprint) structures
+  const fingerprint = agent.gpg?.fingerprint || agent.gpgFingerprint;
+  const hasProof = agent.proofOfExistence?.canonical || agent.proofOfExistence?.txid;
   const isMainnet = agent.proofOfExistence?.network === 'mainnet';
   
   const platformsHtml = agent.platforms 
@@ -57,12 +59,12 @@ function renderAgentCard(agent) {
     : '';
 
   return `
-    <div class="agent-card" data-fingerprint="${agent.gpgFingerprint}">
+    <div class="agent-card" data-fingerprint="${fingerprint}">
       <div class="agent-name">
         ${agent.name || 'Unknown Agent'}
         ${hasProof && isMainnet ? '<span class="verified-badge">✓</span>' : ''}
       </div>
-      <div class="agent-fingerprint">${agent.gpgFingerprint || 'No fingerprint'}</div>
+      <div class="agent-fingerprint">${fingerprint || 'No fingerprint'}</div>
       <div class="agent-platforms">${platformsHtml}</div>
       ${proofHtml}
     </div>
@@ -70,23 +72,33 @@ function renderAgentCard(agent) {
 }
 
 function renderAgentDetail(agent) {
+  // Handle both nested and flat structures
+  const fingerprint = agent.gpg?.fingerprint || agent.gpgFingerprint;
+  const keyserver = agent.gpg?.keyserver || agent.gpgKeyserver;
+  const walletAddress = agent.wallet?.address;
+  const canonicalTxid = agent.proofOfExistence?.canonical || agent.proofOfExistence?.txid;
+  const txids = agent.proofOfExistence?.txids || (canonicalTxid ? [{txid: canonicalTxid}] : []);
+  
   const proofSection = agent.proofOfExistence ? `
     <div class="detail-section">
       <h3>Proof of Existence</h3>
       <p>Network: ${agent.proofOfExistence.network}</p>
-      <p>TX: <a href="https://blockstream.info${agent.proofOfExistence.network === 'testnet' ? '/testnet' : ''}/tx/${agent.proofOfExistence.txid}" target="_blank">
-        ${agent.proofOfExistence.txid}
-      </a></p>
-      <p>OP_RETURN: ${agent.proofOfExistence.opReturn}</p>
+      ${txids.map(tx => `
+        <p>TX: <a href="https://blockstream.info${agent.proofOfExistence.network === 'testnet' ? '/testnet' : ''}/tx/${tx.txid}" target="_blank">
+          ${tx.txid.slice(0, 16)}...
+        </a>
+        ${tx.opReturn ? `<br><small>OP_RETURN: ${tx.opReturn}</small>` : ''}
+        ${tx.note ? `<br><small><em>${tx.note}</em></small>` : ''}
+        </p>
+      `).join('')}
+      ${agent.proofOfExistence.canonical ? `<p><strong>Canonical:</strong> ${agent.proofOfExistence.canonical.slice(0, 16)}...</p>` : ''}
     </div>
   ` : '';
 
-  const walletsSection = agent.wallets ? `
+  const walletSection = walletAddress ? `
     <div class="detail-section">
-      <h3>Wallets</h3>
-      ${Object.entries(agent.wallets).map(([chain, addr]) => `
-        <p>${chain.toUpperCase()}: ${addr}</p>
-      `).join('')}
+      <h3>Bitcoin Wallet</h3>
+      <p>${walletAddress}</p>
     </div>
   ` : '';
 
@@ -106,11 +118,11 @@ function renderAgentDetail(agent) {
     </div>
     <div class="detail-section">
       <h3>GPG Fingerprint</h3>
-      <p>${agent.gpgFingerprint}</p>
-      ${agent.gpgKeyserver ? `<p>Keyserver: ${agent.gpgKeyserver}</p>` : ''}
+      <p><code>${fingerprint}</code></p>
+      ${keyserver ? `<p>Keyserver: ${keyserver}</p>` : ''}
     </div>
     ${platformsSection}
-    ${walletsSection}
+    ${walletSection}
     ${proofSection}
     <div class="detail-section">
       <h3>Created</h3>
@@ -214,4 +226,21 @@ document.getElementById('modal').addEventListener('click', (e) => {
 
 // Load initial data
 loadStats();
-loadAgents();
+
+// Check for URL query parameter
+const urlParams = new URLSearchParams(window.location.search);
+const queryParam = urlParams.get('q');
+if (queryParam) {
+  document.getElementById('searchInput').value = queryParam;
+  // If it looks like a fingerprint, load directly
+  if (queryParam.length === 40 && /^[A-Fa-f0-9]+$/.test(queryParam)) {
+    fetchIdentity(queryParam).then(agent => {
+      if (agent && agent.name) {
+        showModal(renderAgentDetail(agent));
+      }
+    }).catch(() => {});
+  }
+  handleSearch();
+} else {
+  loadAgents();
+}
